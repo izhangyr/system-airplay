@@ -21,16 +21,14 @@ namespace SystemAirPlay
         private Bonjour.DNSSDService _resolver = null;
 
         private static List<AirPlayDevice> _detectedAirPlayDevices;
-            
-        [STAThread]
-        public static void Main()
+        
+        public App()
         {
-            var app = new App();
-            app.InitializeComponent();
-            app.Run();
+            Startup += Application_Startup;
+            Exit += Application_Exit;
         }
 
-        private void App_OnStartup(object sender, StartupEventArgs e)
+        private void Application_Startup(object sender, StartupEventArgs e)
         {
             var icon = GetResourceStream(new Uri("pack://application:,,,/system-airplay.ico", UriKind.RelativeOrAbsolute));
             if (icon == null) return;
@@ -68,6 +66,32 @@ namespace SystemAirPlay
 
             _detectedAirPlayDevices = new List<AirPlayDevice>();
 
+        }
+
+        private void Application_Exit(object sender, ExitEventArgs e)
+        {
+            _notifyIcon.Visible = false;
+            _notifyIcon = null;
+
+            if (_resolver != null)
+            {
+                _resolver.Stop();
+            }
+
+            if (_browser != null)
+            {
+                _browser.Stop();
+            }
+
+            if (_service != null)
+            {
+                _service.Stop();
+            }
+
+            _eventManager.ServiceFound -= new _IDNSSDEvents_ServiceFoundEventHandler(this.ServiceFound);
+            _eventManager.ServiceLost -= new _IDNSSDEvents_ServiceLostEventHandler(this.ServiceLost);
+            _eventManager.ServiceResolved -= new _IDNSSDEvents_ServiceResolvedEventHandler(this.ServiceResolved);
+            _eventManager.OperationFailed -= new _IDNSSDEvents_OperationFailedEventHandler(this.OperationFailed);
         }
 
         private void OperationFailed(DNSSDService service, DNSSDError error)
@@ -111,31 +135,6 @@ namespace SystemAirPlay
 
         }
 
-        private void App_OnExit(object sender, ExitEventArgs e)
-        {
-            _notifyIcon.Visible = false;
-            _notifyIcon = null;
-
-            if (_resolver != null)
-            {
-                _resolver.Stop();
-            }
-
-            if (_browser != null)
-            {
-                _browser.Stop();
-            }
-
-            if (_service != null)
-            {
-                _service.Stop();
-            }
-
-            _eventManager.ServiceFound -= new _IDNSSDEvents_ServiceFoundEventHandler(this.ServiceFound);
-            _eventManager.ServiceLost -= new _IDNSSDEvents_ServiceLostEventHandler(this.ServiceLost);
-            _eventManager.ServiceResolved -= new _IDNSSDEvents_ServiceResolvedEventHandler(this.ServiceResolved);
-            _eventManager.OperationFailed -= new _IDNSSDEvents_OperationFailedEventHandler(this.OperationFailed);
-        }
 
         private void ServiceLost(DNSSDService dnssdService, DNSSDFlags flags, uint ifindex, string servicename, string regtype, string domain)
         {
